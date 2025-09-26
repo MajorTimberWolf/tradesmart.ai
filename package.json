@@ -1,0 +1,33 @@
+{
+  "name": "eth-global-delhi",
+  "version": "1.0.0",
+  "description": "**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MajorTimberWolf/eth-global-delhi.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/MajorTimberWolf/eth-global-delhi/issues"
+  },
+  "homepage": "https://github.com/MajorTimberWolf/eth-global-delhi#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.1",
+    "ethers": "^6.15.0",
+    "hardhat": "^3.0.6"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0"
+  }
+}
