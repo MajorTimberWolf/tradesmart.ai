@@ -101,7 +101,12 @@ ENV_FILE_PATH = Path(__file__).resolve().parent.parent / ".env"
 class AgentSettings(BaseSettings):
     """Root settings object composed of the agent's sub-configs."""
 
-    model_config = SettingsConfigDict(env_file=str(ENV_FILE_PATH), env_file_encoding="utf-8", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_FILE_PATH),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        env_nested_delimiter="__",
+    )
 
     environment: Literal["development", "staging", "production"] = Field(default="development")
     agent_version: str = Field(default=constants.AGENT_VERSION)

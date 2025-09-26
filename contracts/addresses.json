@@ -1,0 +1,11 @@
+{
+  "11155111": {
+    "agent_registry": "0xcEC24E7245039D3BBE0B7f6d3607849761F90D4B",
+    "arbitrage_agent": "0x27620Bfea8B58Eaf3e103ee270dC2970fa14d072",
+    "dca_agent": "0x723198f642ad20833C8b8E15EbeDd588BB95bAcf",
+    "grid_trading_agent": "0x98820E4FC4998e0d278A8ac9408A831C347197F4",
+    "identity_registry": "",
+    "reputation": "",
+    "validation": ""
+  }
+}
