@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.20;
 
 import {IAgentRegistry} from "../interfaces/IAgentRegistry.sol";
 import {IERC165} from "../interfaces/IERC165.sol";
