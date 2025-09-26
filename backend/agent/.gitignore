@@ -1,0 +1,28 @@
+# Environment files
+.env
+.env.*
+*.env
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Logs & data outputs
+logs/
+*.log
+*.sqlite
+persistence.db
+
+# Tooling & editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
