@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.20;
 
 /// @title ERC165 Interface
 /// @dev Minimal ERC165 interface definition to avoid external dependencies.

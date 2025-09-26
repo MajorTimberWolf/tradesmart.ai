@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.20;
 
 /// @title IPyth
 /// @notice Minimal interface for interacting with the Pyth price oracle on EVM chains.

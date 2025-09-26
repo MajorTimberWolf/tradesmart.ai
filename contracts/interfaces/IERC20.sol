@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.20;
 
 /// @title ERC20 Interface
 /// @notice Minimal subset of the ERC20 standard required by the agent contracts.
