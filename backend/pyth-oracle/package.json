@@ -1,0 +1,22 @@
+{
+  "name": "pyth-oracle",
+  "version": "1.0.0",
+  "description": "Pyth oracle demo script",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/pythOracle.js"
+  },
+  "keywords": [
+    "pyth",
+    "oracle",
+    "defi"
+  ],
+  "author": "ETHGlobal Delhi Team",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@pythnetwork/hermes-client": "^2.0.0",
+    "dotenv": "^17.2.2",
+    "ethers": "^6.15.0"
+  }
+}
