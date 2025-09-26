@@ -1,14 +1,60 @@
-# Compiler files
+# Node & tooling
+node_modules/
+.pnp.cjs
+.pnp.loader.mjs
+yarn-error.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment & secrets
+.env*
+.env.local
+.env.production
+.env.development
+.env.test
+.secret
+!.env.example
+
+# Build & cache
 cache/
 out/
+artifacts/
+typechain-types/
 
-# Ignores development broadcast logs
-!/broadcast
-/broadcast/*/31337/
+# Hardhat/Foundry
+cache-hh/
+coverage/
+coverage.json
+coverage.lcov
 /broadcast/**/dry-run/
+/broadcast/*/31337/
 
-# Docs
+# IDEs & editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Docs & reports
 docs/
+report/coverage/
+report/*.html
 
-# Dotenv file
-.env
+# Misc
+tmp/
+*.tmp
+*.temp
+*.pid
+
+# Python virtual envs (for backend tooling)
+.venv/
+venv/
+env/
+
+# Optional: ignore generated ABI if copied out of artifacts
+contracts/abi/*.json
