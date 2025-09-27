@@ -36,6 +36,7 @@ type SupportResistanceBand = {
   upper: number
   mid: number
   projectedUntil?: number | null
+  lastTouch?: number | null
 }
 
 type SupportResistanceEvent = {
@@ -142,8 +143,9 @@ export function TradingChart() {
 
     if (supportBand && resistanceBand) {
       widgetRef.current.clearDrawings()
+      const label = `Support ${supportBand.lower.toFixed(2)} / Resistance ${resistanceBand.upper.toFixed(2)}\nLast touch ${supportBand.lastTouch ? new Date(supportBand.lastTouch * 1000).toLocaleString() : 'recent'}`
       widgetRef.current.drawZone(supportBand.lower, resistanceBand.upper, {
-        text: `Support ${supportBand.lower.toFixed(2)} / Resistance ${resistanceBand.upper.toFixed(2)}`
+        text: label
       })
     }
   }, [supportResistance])
@@ -199,6 +201,11 @@ export function TradingChart() {
                   <span className="text-emerald-400"> → </span>
                   <span className="font-medium">{band.upper.toFixed(2)}</span>
                 </div>
+                {band.lastTouch ? (
+                  <div className="mt-1 text-xs text-emerald-400">
+                    Last touch {new Date(band.lastTouch * 1000).toLocaleString()}
+                  </div>
+                ) : null}
                 {band.projectedUntil ? (
                   <div className="mt-1 text-xs text-emerald-400">
                     Active until {new Date(band.projectedUntil * 1000).toLocaleTimeString()}

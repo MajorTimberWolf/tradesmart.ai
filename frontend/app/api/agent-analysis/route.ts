@@ -35,6 +35,28 @@ export async function POST(request: Request) {
   const payload = await response.json()
   const supportBand = payload.bands.find((band: any) => band.type === "support") ?? payload.bands[0]
   const resistanceBand = payload.bands.find((band: any) => band.type === "resistance") ?? payload.bands[1]
+  const allBands = payload.bands.map((band: any) => ({
+    ...band,
+    lastTouch: band.lastTouch ?? band.last_touch_ts ?? null,
+  }))
+  const lastTouchTs = allBands.reduce(
+    (latest: number | null, band: any) => {
+      if (typeof band.lastTouch === "number") {
+        return latest === null ? band.lastTouch : Math.max(latest, band.lastTouch)
+      }
+      if (typeof band.last_touch_ts === "number") {
+        return latest === null ? band.last_touch_ts : Math.max(latest, band.last_touch_ts)
+      }
+      return latest
+    },
+    null
+  )
+
+  const lastTouchTime = lastTouchTs ? new Date(lastTouchTs * 1000).toISOString() : payload.generatedAt
+
+  const supportMidDescription = supportBand
+    ? `Support band observed around ${new Date(lastTouchTime).toLocaleString()} between ${supportBand.lower.toFixed(2)} and ${supportBand.upper.toFixed(2)}.`
+    : "Support band unavailable."
 
   const suggestion = {
     id: payload.jobId ?? crypto.randomUUID(),
@@ -48,13 +70,13 @@ export async function POST(request: Request) {
       {
         label: "Monitor support",
         description: supportBand
-          ? `Watch for reactions between ${supportBand.lower.toFixed(2)} and ${supportBand.upper.toFixed(2)}.`
+          ? `Watch for reactions between ${supportBand.lower.toFixed(2)} and ${supportBand.upper.toFixed(2)}. Last touched near ${new Date(lastTouchTime).toLocaleString()}.`
           : "Support band unavailable.",
       },
       {
         label: "Monitor resistance",
         description: resistanceBand
-          ? `Watch for reactions between ${resistanceBand.lower.toFixed(2)} and ${resistanceBand.upper.toFixed(2)}.`
+          ? `Watch for reactions between ${resistanceBand.lower.toFixed(2)} and ${resistanceBand.upper.toFixed(2)}. Last touched near ${new Date(lastTouchTime).toLocaleString()}.`
           : "Resistance band unavailable.",
       },
     ],
@@ -64,7 +86,7 @@ export async function POST(request: Request) {
     latest_price: null,
     change_percent: null,
     data_source: "pyth-agent",
-    supportResistance: payload,
+    supportResistance: { ...payload, bands: allBands, lastTouchTime },
   }
 
   return NextResponse.json(suggestion)
