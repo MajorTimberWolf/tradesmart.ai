@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Optional, Protocol
 
 
 class PriceFeed(Protocol):
@@ -14,12 +14,14 @@ class PriceFeed(Protocol):
 @dataclass
 class TradeSignal:
     should_enter: bool
-    from_token: str
-    to_token: str
-    amount: int
-    expected_price: float
-    portfolio_value: float
-    position_size: float
+    from_token: Optional[str] = None
+    to_token: Optional[str] = None
+    amount: int = 0
+    expected_price: float = 0.0
+    portfolio_value: float = 0.0
+    position_size: float = 0.0
+    reason: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
 
 
 class Strategy:
