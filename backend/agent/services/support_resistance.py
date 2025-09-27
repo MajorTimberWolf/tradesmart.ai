@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from backend.agent.config.settings import AgentSettings, get_settings
 from backend.agent.core.analytics.indicators import rsi_from_candles
 from backend.agent.core.analytics.ohlc import Candle, build_full_4h_candles
-from backend.agent.core.analytics.reversals import detect_reversals
+from backend.agent.core.analytics.reversals import detect_reversals, ReversalPoint
 from backend.agent.core.analytics.bands import Band, build_bands, project_bands, rank_bands
 from backend.agent.core.analytics.validation import validate_candles
 from backend.agent.core.analytics.risk_reward import RRSuggestion, compute_rr_suggestions
@@ -110,6 +110,9 @@ class SupportResistanceService:
         bands = rank_bands(bands, top_n_per_type=request.top_n_per_type)
         bands = project_bands(bands, projection_hours=request.projection_hours)
 
+        if not bands:
+            bands = self._fallback_bands(candles, request.tolerance_pct, request.projection_hours)
+
         # Indicators
         rsi_series = rsi_from_candles(candles, period=request.rsi_period)
         rsi_value = rsi_series[-1] if rsi_series else float("nan")
@@ -126,25 +129,6 @@ class SupportResistanceService:
                 "riskReward": [_rr_to_out(x) for x in rr],
             },
         )
-
-    def _synthetic_price_updates(self, symbol: str, start_time: int, end_time: int) -> List[Dict[str, int]]:
-        base = self._fallback_base_price(symbol)
-        updates: List[Dict[str, int]] = []
-        window = 4 * 60 * 60
-        total = max(1, (end_time - start_time) // window)
-        amplitude = base * 0.015
-        for i in range(total):
-            timestamp = start_time + i * window
-            price_value = base + amplitude * math.sin(i / 3)
-            expo = -8
-            updates.append(
-                {
-                    "publish_time": timestamp,
-                    "price": int(price_value * (10 ** abs(expo))),
-                    "expo": expo,
-                }
-            )
-        return updates
 
     def _synthetic_candles(self, symbol: str, start_time: int, end_time: int) -> List[Candle]:
         base = self._fallback_base_price(symbol)
@@ -185,6 +169,87 @@ class SupportResistanceService:
             "BTC_USD": 50000.0,
         }
         return defaults.get(symbol, 100.0)
+
+    def _fallback_bands(
+        self,
+        candles: List[Candle],
+        tolerance_pct: float,
+        projection_hours: int,
+    ) -> List[Band]:
+        if not candles:
+            return []
+
+        closes = [c.close for c in candles]
+        if len(closes) < 2:
+            return []
+
+        timestamps = [c.start_time for c in candles]
+        min_close = min(closes)
+        max_close = max(closes)
+        price_range = max_close - min_close
+
+        if min_close <= 0 or price_range <= 0:
+            return []
+
+        relaxed_reversals = detect_reversals(
+            candles,
+            min_separation_bars=1,
+            min_price_move_pct=0.0,
+        )
+
+        relaxed_bands = build_bands(
+            relaxed_reversals,
+            tolerance_pct=max(tolerance_pct * 2, 0.005),
+            min_touches=2,
+        )
+
+        if relaxed_bands:
+            return project_bands(relaxed_bands, projection_hours=projection_hours)
+
+        # As a last resort, fabricate simple bands around global extrema
+        def make_points(idx: int, kind: str) -> List[ReversalPoint]:
+            points: List[ReversalPoint] = []
+            offsets = (0, -2, 2)
+            for offset in offsets:
+                j = max(0, min(len(candles) - 1, idx + offset))
+                points.append(
+                    ReversalPoint(
+                        index=j,
+                        timestamp=timestamps[j],
+                        price=closes[j],
+                        kind=kind,
+                        magnitude_pct=0.0,
+                    )
+                )
+            return points
+
+        support_idx = closes.index(min_close)
+        resistance_idx = closes.index(max_close)
+        tol = max(tolerance_pct, 0.002)
+
+        support_points = make_points(support_idx, "trough")
+        resistance_points = make_points(resistance_idx, "peak")
+
+        def fabricate_band(points: List[ReversalPoint], band_type: str, center_price: float) -> Band:
+            half_width = max(center_price * tol, price_range * 0.05)
+            return Band(
+                lower=center_price - half_width,
+                upper=center_price + half_width,
+                mid=center_price,
+                points=points,
+                band_type=band_type,
+                touch_count=len(points),
+                avg_bounce_distance=sum(abs(p.price - center_price) for p in points) / len(points),
+                last_touch_ts=points[-1].timestamp,
+                projected_until_ts=None,
+            )
+
+        fallback_bands = [
+            fabricate_band(support_points, "support", closes[support_idx]),
+            fabricate_band(resistance_points, "resistance", closes[resistance_idx]),
+        ]
+
+        return project_bands(fallback_bands, projection_hours=projection_hours)
 
 
 def _band_to_out(b: Band) -> BandOut:

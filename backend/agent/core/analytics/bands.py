@@ -174,6 +174,7 @@ __all__ = [
     "rank_bands",
     "project_bands",
     "cluster_reversals",
+    "_band_bounds",
 ]
 
 
