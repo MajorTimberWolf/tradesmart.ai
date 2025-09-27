@@ -20,9 +20,13 @@ def validate_candles(candles: Iterable[Candle], expected_count: int = 30, minimu
     """Return (ok, reasons) indicating dataset readiness for band detection."""
     reasons: list[str] = []
     seq = list(candles)
-    if not is_complete_window(seq, expected_count):
+    # Accept synthetic backfill as valid for count, but require at least some real candles
+    real_count = sum(1 for c in seq if not c.synthetic)
+    if len(seq) < expected_count:
         reasons.append("insufficient_candles")
-    if not has_min_unique_datapoints(seq, minimum_unique):
+    if real_count == 0:
+        reasons.append("no_real_candles")
+    elif not has_min_unique_datapoints(seq, minimum_unique):
         reasons.append("insufficient_unique_prices")
     return (len(reasons) == 0, reasons)
 
