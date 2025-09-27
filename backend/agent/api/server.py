@@ -77,7 +77,8 @@ async def build_support_resistance(request: SupportResistanceRequest) -> Support
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - surface friendly message
-        raise HTTPException(status_code=500, detail="Support/Resistance analysis failed") from exc
+        # Surface the exception string to aid debugging during development
+        raise HTTPException(status_code=500, detail=f"Support/Resistance analysis failed: {exc}") from exc
 
 
 __all__ = ["app"]
