@@ -73,8 +73,8 @@ PYTH_PRICE_FEED_IDS: dict[str, str] = {}
 
 
 # 1inch configuration defaults
-ONE_INCH_API_BASE = "https://api.1inch.dev"
-ONE_INCH_SWAP_ENDPOINT = "/swap/v6.0"
+ONE_INCH_API_BASE = "https://api.1inch.io"
+ONE_INCH_SWAP_ENDPOINT = "/v5.0"
 
 
 # Agent metadata

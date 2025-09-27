@@ -36,19 +36,32 @@ class TradingAgent:
         signal = self.strategy.generate_signal(market_state)
 
         if not signal.should_enter:
+            print(f"[{now}] No trade signal: {signal.reason}")
+            return
+
+        print(f"[{now}] Trade signal triggered with RSI {signal.metadata.get('rsi') if signal.metadata else 'n/a'}")
+
+        if not signal.from_token or not signal.to_token:
+            print(f"[{now}] Missing token addresses in signal; aborting")
             return
 
         quote = self.quote_fetcher.fetch_swap_quote(signal.from_token, signal.to_token, signal.amount)
+        print(f"[{now}] Received quote: {quote}")
 
         position_assessment = self.risk_manager.validate_position_size(signal.portfolio_value, signal.position_size)
         if not position_assessment.is_acceptable:
+            print(f"[{now}] Position rejected: {position_assessment.reason}")
             return
 
-        slippage_assessment = self.risk_manager.validate_slippage(signal.expected_price, quote.to_token_amount / signal.amount)
+        slippage_assessment = self.risk_manager.validate_slippage(
+            signal.expected_price, quote.to_token_amount / signal.amount
+        )
         if not slippage_assessment.is_acceptable:
+            print(f"[{now}] Slippage too high: {slippage_assessment.reason}")
             return
 
         params = self.strategy.build_execution_params(signal, quote)
-        self.executor.execute_strategy(self.strategy.strategy_id, params)
+        result = self.executor.execute_strategy(self.strategy.strategy_id, params)
+        print(f"[{now}] Execution result: {result}")
 
 
