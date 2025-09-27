@@ -27,6 +27,24 @@ type StrategySuggestion = {
   sample_count?: number
   endpoint_used?: string | null
   latest_publish_time?: number | null
+  supportResistance?: SupportResistanceEvent | null
+}
+
+type SupportResistanceBand = {
+  type: "support" | "resistance"
+  lower: number
+  upper: number
+  mid: number
+  projectedUntil?: number | null
+}
+
+type SupportResistanceEvent = {
+  asset: string
+  priceId: string
+  generatedAt: string
+  bands: SupportResistanceBand[]
+  indicators: Record<string, unknown>
+  jobId?: string | null
 }
 
 export function TradingChart() {
@@ -38,8 +56,13 @@ export function TradingChart() {
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [hasRecentSuggestion, setHasRecentSuggestion] = useState(false)
+  const [supportResistance, setSupportResistance] = useState<SupportResistanceEvent | null>(null)
 
   const analysisEndpoint = useMemo(() => "/api/agent-analysis", [])
+  const agentBase = useMemo(
+    () => (process.env.NEXT_PUBLIC_AGENT_API ?? "http://localhost:8000").replace(/\/$/, ""),
+    []
+  )
 
   const handleAnalyzeChart = useCallback(async () => {
     setIsAnalyzing(true)
@@ -67,15 +90,6 @@ export function TradingChart() {
       setStrategySuggestion(suggestion)
       setHasRecentSuggestion(true)
 
-      if (widgetRef.current) {
-        widgetRef.current.clearDrawings()
-        widgetRef.current.drawZone(
-          suggestion.support_level,
-          suggestion.resistance_level,
-          { text: suggestion.title }
-        )
-      }
-
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('agent-strategy-generated'))
       }
@@ -95,6 +109,44 @@ export function TradingChart() {
     const timer = setTimeout(() => setHasRecentSuggestion(false), 6000)
     return () => clearTimeout(timer)
   }, [hasRecentSuggestion])
+
+  useEffect(() => {
+    const eventSource = new EventSource(`${agentBase}/api/events`)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data)
+        if (payload.type === 'strategy.support_resistance.created') {
+          setSupportResistance(payload.payload)
+        }
+      } catch (err) {
+        console.warn('Failed to parse SSE payload', err)
+      }
+    }
+
+    eventSource.onerror = (err) => {
+      console.warn('SSE connection error', err)
+      eventSource.close()
+    }
+
+    return () => eventSource.close()
+  }, [agentBase])
+
+  useEffect(() => {
+    if (!supportResistance || !widgetRef.current) {
+      return
+    }
+
+    const supportBand = supportResistance.bands.find((band) => band.type === 'support')
+    const resistanceBand = supportResistance.bands.find((band) => band.type === 'resistance')
+
+    if (supportBand && resistanceBand) {
+      widgetRef.current.clearDrawings()
+      widgetRef.current.drawZone(supportBand.lower, resistanceBand.upper, {
+        text: `Support ${supportBand.lower.toFixed(2)} / Resistance ${resistanceBand.upper.toFixed(2)}`
+      })
+    }
+  }, [supportResistance])
 
   return (
     <div className="w-full h-full bg-[#0a0a0a] p-4">
@@ -128,6 +180,35 @@ export function TradingChart() {
         containerId="btc-tradingview-chart"
         ref={widgetRef}
       />
+
+      {supportResistance && (
+        <div className="mt-4 rounded-lg border border-emerald-600/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+          <div className="flex items-center justify-between">
+            <div className="text-base font-semibold text-white">Live Support & Resistance Bands</div>
+            <div className="text-xs text-emerald-300">{new Date(supportResistance.generatedAt).toLocaleTimeString()}</div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {supportResistance.bands.map((band) => (
+              <div
+                key={`${band.type}-${band.lower}-${band.upper}`}
+                className="rounded-md border border-emerald-400/40 bg-[#102820] px-3 py-2"
+              >
+                <div className="text-xs uppercase tracking-wide text-emerald-300">{band.type}</div>
+                <div className="mt-1 text-sm">
+                  <span className="font-medium">{band.lower.toFixed(2)}</span>
+                  <span className="text-emerald-400"> → </span>
+                  <span className="font-medium">{band.upper.toFixed(2)}</span>
+                </div>
+                {band.projectedUntil ? (
+                  <div className="mt-1 text-xs text-emerald-400">
+                    Active until {new Date(band.projectedUntil * 1000).toLocaleTimeString()}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {strategySuggestion && (
         <div className="mt-4 rounded-lg border border-gray-700 bg-[#111111] p-4 text-sm text-gray-200">
