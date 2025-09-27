@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "./ui/button"
+import { StrategyBuilder, StrategyConfig } from "./strategy-builder"
 
 type StrategyAction = {
   label: string
@@ -55,6 +56,7 @@ export function OrderBook() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [hasRecentSuggestion, setHasRecentSuggestion] = useState(false)
   const [supportResistance, setSupportResistance] = useState<SupportResistanceEvent | null>(null)
+  const [showStrategyBuilder, setShowStrategyBuilder] = useState(false)
 
   const analysisEndpoint = useMemo(() => "/api/agent-analysis", [])
   const agentBase = useMemo(
@@ -121,10 +123,7 @@ export function OrderBook() {
     return () => eventSource.close()
   }, [agentBase])
 
-  // Auto-fetch data on component mount
-  useEffect(() => {
-    handleAnalyzeChart()
-  }, [handleAnalyzeChart])
+  // Removed auto-fetch - only fetch when user clicks "Ask Agent" button
 
   useEffect(() => {
     if (!hasRecentSuggestion) {
@@ -135,23 +134,38 @@ export function OrderBook() {
     return () => clearTimeout(timer)
   }, [hasRecentSuggestion])
 
-  // Listen for strategy suggestions from the main chart
-  useEffect(() => {
-    const handleStrategyGenerated = () => {
-      // Re-fetch data when strategy is generated
-      handleAnalyzeChart()
-    }
-
-    window.addEventListener('agent-strategy-generated', handleStrategyGenerated)
-    return () => window.removeEventListener('agent-strategy-generated', handleStrategyGenerated)
-  }, [handleAnalyzeChart])
+  // Removed automatic re-fetch on strategy generation - only fetch when user clicks "Ask Agent"
 
   const supportBand = supportResistance?.bands.find((band) => band.type === 'support')
   const resistanceBand = supportResistance?.bands.find((band) => band.type === 'resistance')
 
+  const handleStrategyCreate = useCallback(async (strategy: StrategyConfig) => {
+    try {
+      const response = await fetch('/api/strategy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(strategy)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create strategy')
+      }
+
+      const result = await response.json()
+      console.log('Strategy created:', result)
+      
+      // Show success message or handle as needed
+      setShowStrategyBuilder(false)
+    } catch (error) {
+      console.error('Error creating strategy:', error)
+    }
+  }, [])
+
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a] border-r border-[#1a1a1a]">
-      <div className="p-3">
+    <div className="flex flex-col h-screen bg-[#0a0a0a] border-r border-[#1a1a1a]">
+      <div className="p-3 flex-1 overflow-y-auto">
         <div className="text-center text-white text-sm font-semibold mb-4">
           Live Support & Resistance Bands
         </div>
@@ -172,6 +186,20 @@ export function OrderBook() {
             </span>
           )}
         </div>
+
+        {/* Strategy Builder Toggle */}
+        {supportResistance && (
+          <div className="mb-4">
+            <Button 
+              onClick={() => setShowStrategyBuilder(!showStrategyBuilder)}
+              variant="outline"
+              className="w-full"
+              size="sm"
+            >
+              {showStrategyBuilder ? 'Hide Strategy Builder' : 'Build Strategy'}
+            </Button>
+          </div>
+        )}
         
         {analysisError && (
           <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
@@ -290,9 +318,23 @@ export function OrderBook() {
         )}
 
         {!supportResistance && !isAnalyzing && !analysisError && (
-          <div className="text-center text-gray-500 text-sm py-4">
+          <div className="text-center text-gray-500 text-sm py-8">
             <div className="mb-2">📊 Order Book</div>
-            <div className="text-xs">Click "Ask Agent" above to load support & resistance data</div>
+            <div className="text-xs">Click "Ask Agent" to analyze chart and get liquidity levels</div>
+            <div className="text-xs text-gray-600 mt-1">No automatic fetching - manual control only</div>
+          </div>
+        )}
+
+        {/* Strategy Builder */}
+        {showStrategyBuilder && supportResistance && (
+          <div className="mt-6">
+            <StrategyBuilder
+              supportLevel={supportBand?.mid}
+              resistanceLevel={resistanceBand?.mid}
+              symbol={symbol}
+              timeframe={fixedInterval}
+              onStrategyCreate={handleStrategyCreate}
+            />
           </div>
         )}
       </div>
