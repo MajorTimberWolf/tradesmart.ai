@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import { Button } from "./ui/button"
+import { uploadStrategyEncrypted, signAuthMessageWithWallet } from "@/lib/lighthouse"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { IndicatorSelector } from "./indicator-selector"
-import { RiskRewardSelector } from "./risk-reward-selector"
+import { IndicatorSelector } from "@/components/indicator-selector"
+import { RiskRewardSelector } from "@/components/risk-reward-selector"
+import { toast } from "@/hooks/use-toast"
 
 export interface StrategyConfig {
   riskRewardRatio: string
@@ -44,7 +46,7 @@ export function StrategyBuilder({
   const [riskRewardRatio, setRiskRewardRatio] = useState<string>('1:2')
   const [selectedIndicators, setSelectedIndicators] = useState<IndicatorConfig[]>([])
 
-  const handleCreateStrategy = () => {
+  const handleCreateStrategy = async () => {
     const liquidityLevel = selectedLiquidityType === 'support' 
       ? { type: 'support' as const, price: supportLevel || 0 }
       : { type: 'resistance' as const, price: resistanceLevel || 0 }
@@ -55,6 +57,56 @@ export function StrategyBuilder({
       liquidityLevel,
       symbol,
       timeframe
+    }
+
+    // Upload encrypted to Lighthouse using wallet signature
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_LIGHTHOUSE_API_KEY as string | undefined
+      
+      if (!apiKey) {
+        console.warn('Lighthouse API key not configured')
+        return
+      }
+
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        console.warn('Wallet not available for signing')
+        return
+      }
+
+      // Request wallet connection and signature
+      const accounts: string[] = await (window as any).ethereum.request({ method: 'eth_requestAccounts' })
+      const account = accounts?.[0]
+      console.log('🔐 Upload using account:', account)
+      
+      if (!account) {
+        console.warn('No wallet account available')
+        return
+      }
+
+      // Per Lighthouse best-practice: fetch auth message and sign that
+      const signedMessage = await signAuthMessageWithWallet(account)
+
+      console.log('📤 Uploading strategy with publicKey:', account)
+      const res = await uploadStrategyEncrypted(strategy, {
+        apiKey,
+        publicKey: account,
+        signedMessage,
+        name: `strategy-${symbol}-${Date.now()}`
+      })
+      console.log('✅ Upload response:', res)
+      
+      toast({
+        title: 'Strategy stored',
+        description: `Saved to Lighthouse (CID: ${res.cid})`
+      })
+      
+      // Emit event so others can load list
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('strategy-stored', { detail: { cid: res.cid, url: res.url, strategy } }))
+      }
+      
+    } catch (err) {
+      console.error('Lighthouse upload failed:', err)
     }
 
     onStrategyCreate(strategy)

@@ -13,6 +13,11 @@ interface TradingViewWidgetProps {
 export interface TradingViewWidgetHandle {
   captureChart: () => Promise<string | null>
   drawZone: (supportPrice: number, resistancePrice: number, options?: { text?: string }) => void
+  drawBand: (
+    lowerPrice: number,
+    upperPrice: number,
+    options?: { text?: string; hours?: number; color?: string; fillColor?: string }
+  ) => void
   clearDrawings: () => void
 }
 
@@ -24,7 +29,7 @@ declare global {
 
 let tvScriptLoadingPromise: Promise<void> | null = null
 
-export default forwardRef<TradingViewWidgetHandle, TradingViewWidgetProps>(function TradingViewWidget(
+const TradingViewWidget = forwardRef<TradingViewWidgetHandle, TradingViewWidgetProps>(function TradingViewWidget(
   {
     symbol = "BTCUSD:PYTH", // ✅ use TradingView-compatible Pyth symbol
     interval = "5",
@@ -76,7 +81,7 @@ export default forwardRef<TradingViewWidgetHandle, TradingViewWidgetProps>(funct
 
         return new Promise<string | null>((resolve) => {
           let settled = false
-          let timeoutId: ReturnType<typeof window.setTimeout>
+          let timeoutId: number
           const finish = (value: string | null) => {
             if (settled) return
             settled = true
@@ -104,12 +109,13 @@ export default forwardRef<TradingViewWidgetHandle, TradingViewWidgetProps>(funct
           try {
             const result = widget.takeScreenshot()
             if (isPromiseLike(result)) {
-              result
-                .then((value) => finish(normalize(value)))
-                .catch((err) => {
+              result.then(
+                (value) => finish(normalize(value)),
+                (err: unknown) => {
                   console.warn("TradingView widget.takeScreenshot rejection", err)
                   finish(null)
-                })
+                }
+              )
               return
             }
 
@@ -237,6 +243,45 @@ export default forwardRef<TradingViewWidgetHandle, TradingViewWidgetProps>(funct
         console.error("TradingView drawing error", error)
       }
     },
+    drawBand: (lowerPrice, upperPrice, options) => {
+      if (!chartRef.current || Number.isNaN(lowerPrice) || Number.isNaN(upperPrice)) {
+        return
+      }
+
+      const lower = Math.min(lowerPrice, upperPrice)
+      const upper = Math.max(lowerPrice, upperPrice)
+
+      const chart = chartRef.current
+      const nowSec = Math.floor(Date.now() / 1000)
+      const futureHours = Math.max(1, Math.floor(options?.hours ?? 12))
+      const from = nowSec
+      const to = nowSec + futureHours * 60 * 60
+
+      try {
+        const rectangle = chart.createMultipointShape(
+          [
+            { time: from, price: upper },
+            { time: to, price: lower }
+          ],
+          {
+            shape: "rectangle",
+            disableSelection: true,
+            disableUndo: true,
+            lock: true,
+            text: options?.text ?? "Liquidity Band",
+            color: options?.color ?? "#22c55e",
+            fillColor: options?.fillColor ?? "rgba(34,197,94,0.12)",
+            linewidth: 2
+          }
+        )
+
+        if (rectangle) {
+          drawingsRef.current.push(rectangle)
+        }
+      } catch (error) {
+        console.error("TradingView drawing error", error)
+      }
+    },
     clearDrawings: () => {
       drawingsRef.current.forEach((shape) => {
         try {
@@ -336,3 +381,5 @@ export default forwardRef<TradingViewWidgetHandle, TradingViewWidgetProps>(funct
     </div>
   )
 })
+
+export default TradingViewWidget
