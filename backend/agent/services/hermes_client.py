@@ -8,6 +8,7 @@ handling.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import base64
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -31,7 +32,8 @@ def _parse_hermes_endpoint(raw_endpoint: str) -> Tuple[str, Dict[str, str]]:
         url = httpx.URL(raw_endpoint)
         if url.user is not None and url.password is not None:
             auth_bytes = f"{url.user}:{url.password}".encode("utf-8")
-            headers["Authorization"] = "Basic " + httpx._models._base64_encode(auth_bytes)
+            token = base64.b64encode(auth_bytes).decode("ascii")
+            headers["Authorization"] = "Basic " + token
             # strip credentials from the emitted URL
             sanitized = url.copy_with(user=None, password=None)
             return str(sanitized), headers
