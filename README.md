@@ -21,6 +21,22 @@ python app.py --quote    # Test 1inch quotes
 python app.py --test     # Run unit tests
 ```
 
+## 🧠 Agent + Frontend Integration
+
+```bash
+# 1. Ensure backend/agent/.env contains your OpenRouter API key (LLM__API_KEY)
+
+# 2. Start the chart-analysis API (FastAPI)
+uvicorn backend.agent.api.server:app --host 0.0.0.0 --port 8000 --reload
+
+# 3. Configure the frontend
+echo "NEXT_PUBLIC_AGENT_API_URL=http://127.0.0.1:8000" >> frontend/.env.local
+
+# 4. Start the Next.js frontend separately (see frontend README)
+```
+
+Once running, the TradingView chart exposes an **Ask Agent** action. The captured chart snapshot is analysed by Claude Sonnet via OpenRouter and recent strategy suggestions appear in the Strategy Address Book panel.
+
 ## 📋 Available Commands
 
 | Command | Description |
