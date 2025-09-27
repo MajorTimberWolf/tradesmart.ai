@@ -3,6 +3,7 @@ import { TradingChart } from "@/components/trading-chart"
 import { OrderBook } from "@/components/order-book"
 import { AccountBalance } from "@/components/account-balance"
 import { MarketDataTables } from "@/components/market-data-tables"
+import { StrategyAddressBook } from "@/components/strategy-address-book"
 
 export default function TradingPage() {
   return (
@@ -24,12 +25,16 @@ export default function TradingPage() {
         {/* Right sidebar - Order book and account section */}
         <div className="w-80 flex flex-col border-l border-border">
           {/* Order book with fixed height */}
-          <div className="h-[600px] min-h-[600px]">
+          <div className="h-[360px] min-h-[360px]">
             <OrderBook />
           </div>
 
           <div className="border-t border-border">
             <AccountBalance />
+          </div>
+
+          <div className="flex-1 border-t border-border overflow-hidden">
+            <StrategyAddressBook />
           </div>
         </div>
       </div>
