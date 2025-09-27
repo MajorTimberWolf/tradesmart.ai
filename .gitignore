@@ -58,3 +58,4 @@ env/
 
 # Optional: ignore generated ABI if copied out of artifacts
 contracts/abi/*.json
+backend/agent/.env

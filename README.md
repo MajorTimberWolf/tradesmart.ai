@@ -1,66 +1,158 @@
-## Foundry
+# Simple Trading Agent
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A simplified LangChain trading agent that autonomously executes trading strategies using ERC8004 infrastructure, Pyth Network price oracles, and 1inch DEX integration.
 
-Foundry consists of:
+## 🚀 Quick Start
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+```bash
+# Activate environment
+conda activate ethglobal
 
-## Documentation
+# Run the agent once
+python app.py
 
-https://book.getfoundry.sh/
+# Run continuously
+python app.py --mode loop
 
-## Usage
-
-### Build
-
-```shell
-$ forge build
+# Test individual components
+python app.py --price    # Test price fetching
+python app.py --rsi      # Test RSI calculation
+python app.py --quote    # Test 1inch quotes
+python app.py --test     # Run unit tests
 ```
 
-### Test
+## 📋 Available Commands
 
-```shell
-$ forge test
+| Command | Description |
+|---------|-------------|
+| `python app.py` | Run agent once (default) |
+| `python app.py --mode once` | Run agent once (explicit) |
+| `python app.py --mode loop` | Run continuously (30s intervals) |
+| `python app.py --price` | Test Pyth price fetching |
+| `python app.py --rsi` | Test RSI calculation with live data |
+| `python app.py --quote` | Test 1inch quote fetching |
+| `python app.py --test` | Run all unit tests |
+
+## 🏗️ Architecture
+
+```
+app.py                          # Simple entry point
+├── backend/agent/
+│   ├── core/
+│   │   ├── agent.py           # Main TradingAgent class
+│   │   ├── tools/             # Core tools
+│   │   │   ├── price_fetcher.py    # Pyth price feeds
+│   │   │   ├── rsi_calculator.py   # RSI calculation
+│   │   │   ├── quote_fetcher.py    # 1inch quotes
+│   │   │   ├── contract_executor.py # Web3 execution
+│   │   │   └── risk_manager.py     # Risk management
+│   │   └── strategies/
+│   │       ├── strategy_base.py    # Base strategy class
+│   │       └── rsi_strategy.py     # RSI trading strategy
+│   ├── config/
+│   │   ├── settings.py        # Configuration management
+│   │   └── constants.py       # Trading constants
+│   └── tests/
+│       └── test_trading_agent.py # Unit tests
 ```
 
-### Format
+## ⚙️ Configuration
 
-```shell
-$ forge fmt
+The agent uses environment variables from `backend/agent/.env`:
+
+```bash
+# Wallet Configuration
+WALLET__PRIVATE_KEY=your_private_key
+WALLET__ADDRESS=your_wallet_address
+
+# Network Configuration
+NETWORK__RPC_URL=https://sepolia.infura.io/v3/your_key
+NETWORK__CHAIN_ID=11155111
+
+# Contract Addresses
+CONTRACTS__AGENT_REGISTRY=0x...
+CONTRACTS__ARBITRAGE_AGENT=0x...
+CONTRACTS__DCA_AGENT=0x...
+CONTRACTS__GRID_TRADING_AGENT=0x...
+
+# API Keys
+ONEINCH__API_KEY=your_1inch_api_key
+PYTH__API_KEY=your_pyth_api_key
 ```
 
-### Gas Snapshots
+## 🔧 Development
 
-```shell
-$ forge snapshot
+### Running Tests
+```bash
+python app.py --test
 ```
 
-### Anvil
+### Testing Individual Components
+```bash
+# Test price fetching
+python app.py --price
 
-```shell
-$ anvil
+# Test RSI calculation
+python app.py --rsi
+
+# Test quote fetching
+python app.py --quote
 ```
 
-### Deploy
+### Running the Agent
+```bash
+# Single run
+python app.py
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+# Continuous loop
+python app.py --mode loop
 ```
 
-### Cast
+## 📊 Current Status
 
-```shell
-$ cast <subcommand>
+- ✅ **Price Fetching**: Pyth Network integration working
+- ✅ **RSI Calculation**: Technical analysis working
+- ✅ **Agent Orchestration**: Main loop working
+- ✅ **Unit Tests**: All tests passing
+- 🔄 **Quote Fetching**: Needs Sepolia token addresses
+- 🔄 **Contract Execution**: Needs strategy parameter updates
+
+## 🎯 Next Steps
+
+1. Update RSI strategy with Sepolia token addresses
+2. Test 1inch quote fetching with real tokens
+3. Enable contract execution for live trading
+4. Add more trading strategies (Grid, DCA)
+
+## 📝 Logs
+
+The agent provides detailed logging:
+- Price data and confidence levels
+- RSI calculations and signals
+- Trade execution results
+- Error handling and recovery
+
+Example output:
+```
+🚀 Simple Trading Agent
+==================================================
+🤖 Running Trading Agent (Once)...
+[2025-09-27 00:45:31] No trade signal: RSI 50.00 not below threshold
+✅ Agent cycle completed
+✅ All operations completed successfully!
 ```
 
-### Help
+## 🛡️ Safety Features
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+- Risk management validation
+- Slippage protection
+- Position size limits
+- Emergency stop capabilities
+- Comprehensive error handling
+
+## 📚 Documentation
+
+- [Agent Plan](plan-docs/agent-plan.md) - Detailed implementation plan
+- [Complete Plan](plan-docs/complete-plan.md) - Full project overview
+- [Contract Addresses](contracts/addresses.json) - Deployed contract addresses
+- [ABI Files](contracts/abi/) - Contract interfaces
