@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 
 from backend.agent.config.settings import AgentSettings, get_settings
 from backend.agent.core.tools.price_fetcher import PriceFetcher
+from backend.agent.api.event_bus import event_bus
 
 
 @dataclass
@@ -79,6 +80,23 @@ class MonitoringJobs:
                             f"[{b.lower:.4f}, {b.upper:.4f}] at price {price:.4f}"
                         )
                         # In future: trigger execution path and notify frontend
+                        event_bus.publish_sync(
+                            {
+                                "type": "monitor.band.touch",
+                                "payload": {
+                                    "jobId": job_id,
+                                    "symbol": symbol,
+                                    "band": {
+                                        "type": b.band_type,
+                                        "lower": b.lower,
+                                        "upper": b.upper,
+                                        "projectedUntil": b.projected_until,
+                                    },
+                                    "price": price,
+                                    "timestamp": now,
+                                },
+                            }
+                        )
 
                 time.sleep(interval)
 
