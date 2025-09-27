@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 
-import type { TimeInterval } from "@/components/time-interval-filters"
-
 interface StrategyAction {
   label: string
   description: string
@@ -20,7 +18,7 @@ interface StrategySuggestion {
   confidence: number
   actions: StrategyAction[]
   symbol: string
-  interval: TimeInterval | string
+  interval: string
   created_at: string
 }
 

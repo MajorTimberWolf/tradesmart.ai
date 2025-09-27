@@ -1,4 +1,3 @@
-import { TradingHeader } from "@/components/trading-header"
 import { TradingChart } from "@/components/trading-chart"
 import { OrderBook } from "@/components/order-book"
 import { AccountBalance } from "@/components/account-balance"
@@ -8,8 +7,6 @@ import { StrategyAddressBook } from "@/components/strategy-address-book"
 export default function TradingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground dark">
-      <TradingHeader />
-
       <div className="flex">
         {/* Left section - Main chart area taking up most space */}
         <div className="flex-1 flex flex-col min-w-0">

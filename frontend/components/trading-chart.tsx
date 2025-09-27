@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TradingViewWidget, { TradingViewWidgetHandle } from "./tradingview-widget"
-import TimeIntervalFilters, { TimeInterval } from "./time-interval-filters"
 import { Button } from "./ui/button"
 
 type StrategyAction = {
@@ -31,7 +30,7 @@ type StrategySuggestion = {
 }
 
 export function TradingChart() {
-  const [selectedInterval, setSelectedInterval] = useState<TimeInterval>("5")
+  const fixedInterval = "5"
   const symbol = "PYTH:BTCUSD"
   const widgetRef = useRef<TradingViewWidgetHandle | null>(null)
 
@@ -41,11 +40,6 @@ export function TradingChart() {
   const [hasRecentSuggestion, setHasRecentSuggestion] = useState(false)
 
   const analysisEndpoint = useMemo(() => "/api/agent-analysis", [])
-
-  // Handle interval changes
-  const handleIntervalChange = (interval: TimeInterval) => {
-    setSelectedInterval(interval)
-  }
 
   const handleAnalyzeChart = useCallback(async () => {
     setIsAnalyzing(true)
@@ -59,7 +53,7 @@ export function TradingChart() {
         },
         body: JSON.stringify({
           symbol,
-          interval: selectedInterval
+          interval: fixedInterval
         })
       })
 
@@ -91,7 +85,7 @@ export function TradingChart() {
     } finally {
       setIsAnalyzing(false)
     }
-  }, [analysisEndpoint, selectedInterval, symbol])
+  }, [analysisEndpoint, fixedInterval, symbol])
 
   useEffect(() => {
     if (!hasRecentSuggestion) {
@@ -104,26 +98,19 @@ export function TradingChart() {
 
   return (
     <div className="w-full h-full bg-[#0a0a0a] p-4">
-      {/* Time Interval Filters & Agent Analysis */}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <TimeIntervalFilters 
-          selectedInterval={selectedInterval}
-          onIntervalChange={handleIntervalChange}
-        />
-
-        <div className="flex items-center gap-2">
-          <Button 
-            onClick={handleAnalyzeChart}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? 'Analyzing…' : 'Ask Agent'}
-          </Button>
-          {hasRecentSuggestion && (
-            <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-              Suggestion delivered
-            </span>
-          )}
-        </div>
+      {/* Agent Analysis */}
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        <Button 
+          onClick={handleAnalyzeChart}
+          disabled={isAnalyzing}
+        >
+          {isAnalyzing ? 'Analyzing…' : 'Ask Agent'}
+        </Button>
+        {hasRecentSuggestion && (
+          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+            Suggestion delivered
+          </span>
+        )}
       </div>
 
       {analysisError && (
@@ -135,7 +122,7 @@ export function TradingChart() {
       {/* TradingView Chart */}
       <TradingViewWidget
         symbol={symbol}
-        interval={selectedInterval}
+        interval={fixedInterval}
         theme="dark"
         height={500}
         containerId="btc-tradingview-chart"
