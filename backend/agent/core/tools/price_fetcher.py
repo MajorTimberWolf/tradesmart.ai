@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, Dict, Optional
 
 import httpx
@@ -32,20 +33,40 @@ class PriceFetcher:
         if not feed_id:
             raise ValueError(f"No Pyth feed configured for symbol: {symbol}")
 
-        url = f"{self.settings.pyth.endpoint}/api/latest_price/{feed_id}"
+        feed_param = feed_id[2:] if feed_id.startswith("0x") else feed_id
+
+        base_url = str(self.settings.pyth.endpoint).rstrip("/")
+        url = f"{base_url}/api/latest_price_feeds"
+        params = {"ids[]": feed_param}
         headers: Dict[str, str] = {}
         if self.settings.pyth.api_key:
             headers["Authorization"] = f"Bearer {self.settings.pyth.api_key.get_secret_value()}"
 
-        response = self.client.get(url, headers=headers)
+        response = self.client.get(url, params=params, headers=headers)
         response.raise_for_status()
-        data: Dict[str, Any] = response.json()
+        data: Any = response.json()
 
-        price_info = data.get("price") or {}
-        price = float(price_info.get("price", 0))
-        conf = float(price_info.get("conf", 0))
-        publish_time = int(price_info.get("publish_time", 0))
+        if not data:
+            raise ValueError(f"Empty response from Pyth for feed {feed_id}")
 
-        return PriceData(price=price, confidence=conf, publish_time=publish_time, id=feed_id)
+        entry: Dict[str, Any] = data[0]
+        price_info = entry.get("price")
+        if not price_info:
+            raise ValueError(f"No price data in response for feed {feed_id}: {entry}")
+
+        expo = int(price_info.get("expo", 0))
+        price_raw = Decimal(price_info.get("price", 0))
+        conf_raw = Decimal(price_info.get("conf", 0))
+        scale = Decimal(10) ** expo
+        price_value = price_raw * scale
+        conf_value = conf_raw * scale
+        publish_time = int(price_info.get("publish_time", entry.get("publish_time", 0)))
+
+        return PriceData(
+            price=float(price_value),
+            confidence=float(conf_value),
+            publish_time=publish_time,
+            id=feed_id,
+        )
 
 

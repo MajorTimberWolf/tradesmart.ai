@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib import import_module
 from typing import Any, Dict, Optional
 
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+def _get_poa_middleware():
+    from web3.middleware import extra_data_middleware, geth_poa_middleware  # type: ignore[attr-defined]
+
+    return getattr(extra_data_middleware, "ExtraDataToPOABueller", geth_poa_middleware)
 
 from backend.agent.config.settings import AgentSettings, get_settings
 
@@ -27,8 +31,22 @@ class ContractExecutor:
     def _create_web3(self) -> Web3:
         w3 = Web3(Web3.HTTPProvider(self.settings.network.rpc_url))
         if self.settings.network.chain_id == 11155111:
-            w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            poa_middleware = self._resolve_poa_middleware()
+            w3.middleware_onion.inject(poa_middleware, layer=0)
         return w3
+
+    @staticmethod
+    def _resolve_poa_middleware():
+        try:
+            module = import_module("web3.middleware")
+            return getattr(module, "geth_poa_middleware")
+        except AttributeError:
+            try:
+                module = import_module("web3.middleware")
+                return getattr(module, "ExtraDataToPOAMiddleware")
+            except AttributeError:
+                module = import_module("web3.middleware.proof_of_authority")
+                return getattr(module, "ExtraDataToPOAMiddleware")
 
     def _load_contract(self, address: str, abi_filename: str):
         import json

@@ -35,8 +35,8 @@ class RSICalculator:
                 gains.append(0.0)
                 losses.append(abs(delta))
 
-        avg_gain = sum(gains[-self.period :]) / self.period
-        avg_loss = sum(losses[-self.period :]) / self.period
+        avg_gain = sum(gains[-self.period :]) / self.period if gains else 0.0
+        avg_loss = sum(losses[-self.period :]) / self.period if losses else 0.0
 
         if avg_loss == 0:
             return 100.0
