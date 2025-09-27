@@ -239,6 +239,9 @@ export function OrderBook() {
                   <div className="text-sm font-medium text-emerald-100">
                     {supportBand.lower.toFixed(2)} → {supportBand.upper.toFixed(2)}
                   </div>
+                  <div className="text-xs text-emerald-300">
+                    Width {(supportBand.upper - supportBand.lower).toFixed(2)}
+                  </div>
                   <div className="text-xs text-emerald-400 mt-1">
                     Last touch {new Date(supportResistance.generatedAt).toLocaleString()}
                   </div>
@@ -259,6 +262,9 @@ export function OrderBook() {
                   <div className="text-sm font-medium text-orange-100">
                     {resistanceBand.lower.toFixed(2)} → {resistanceBand.upper.toFixed(2)}
                   </div>
+                  <div className="text-xs text-orange-300">
+                    Width {(resistanceBand.upper - resistanceBand.lower).toFixed(2)}
+                  </div>
                   <div className="text-xs text-orange-400 mt-1">
                     Last touch {new Date(supportResistance.generatedAt).toLocaleString()}
                   </div>
@@ -271,44 +277,6 @@ export function OrderBook() {
               )}
             </div>
 
-            {/* Current Values */}
-            <div className="space-y-2">
-              <div className="text-xs text-gray-400 text-center">
-                Support {supportBand?.lower.toFixed(2) || '-'} / Resistance {resistanceBand?.upper.toFixed(2) || '-'}
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-center">
-                  <div className="text-xs text-emerald-300">Support</div>
-                  <div className="text-sm font-semibold text-emerald-100">
-                    {supportBand?.mid.toFixed(2) || '-'}
-                  </div>
-                </div>
-                <div className="rounded-md border border-orange-400/30 bg-orange-500/10 p-2 text-center">
-                  <div className="text-xs text-orange-300">Resistance</div>
-                  <div className="text-sm font-semibold text-orange-100">
-                    {resistanceBand?.mid.toFixed(2) || '-'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Monitoring Instructions */}
-            {strategySuggestion?.actions && (
-              <div className="space-y-2">
-                {strategySuggestion.actions.map((action) => (
-                  <div
-                    key={action.label}
-                    className="rounded-md border border-gray-700/60 bg-[#181818] px-3 py-2"
-                  >
-                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">
-                      {action.label}
-                    </div>
-                    <div className="text-xs text-gray-300">{action.description}</div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Summary */}
             <div className="text-xs text-gray-500 text-center">
