@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import asyncio
+import json
 
 from backend.agent.services.chart_analysis import (
     ChartAnalysisRequest,
@@ -16,8 +19,13 @@ from backend.agent.services.support_resistance import (
     SupportResistanceService,
 )
 from backend.agent.execution.job_runner import MonitoringJobs, WatchedBand
+from backend.agent.api.event_bus import event_bus
 
 app = FastAPI(title="ERC8004 Agent Analysis API", version="0.1.0")
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    event_bus.set_loop(asyncio.get_running_loop())
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,6 +67,12 @@ async def list_strategies() -> list[StrategySuggestion]:
 async def build_support_resistance(request: SupportResistanceRequest) -> SupportResistanceResponse:
     try:
         result = _sr_service.build(request)
+        await event_bus.publish(
+            {
+                "type": "strategy.support_resistance.created",
+                "payload": result.model_dump(mode="json"),
+            }
+        )
         # Kick off background monitoring for the returned bands
         watched = [
             WatchedBand(
@@ -80,5 +94,21 @@ async def build_support_resistance(request: SupportResistanceRequest) -> Support
         # Surface the exception string to aid debugging during development
         raise HTTPException(status_code=500, detail=f"Support/Resistance analysis failed: {exc}") from exc
 
+
+@app.get("/api/events")
+async def stream_events(request: Request) -> StreamingResponse:
+    async def generator():
+        async for event in event_bus.subscribe():
+            if await request.is_disconnected():
+                break
+            data = json.dumps(event)
+            yield f"data: {data}\n\n".encode("utf-8")
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "Content-Type": "text/event-stream",
+        "Connection": "keep-alive",
+    }
+    return StreamingResponse(generator(), headers=headers)
 
 __all__ = ["app"]
