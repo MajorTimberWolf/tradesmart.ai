@@ -124,9 +124,14 @@ def backfill_missing_candles(
             last_close = existing.close
         else:
             if last_close is None:
-                # Without a prior close, we cannot synthesize a meaningful candle; skip
-                cursor = window_end
-                continue
+                # Seed with the first known candle's open if available
+                if by_start:
+                    first_known = by_start[min(by_start.keys())]
+                    last_close = first_known.open
+                else:
+                    # No data at all
+                    cursor = window_end
+                    continue
             full.append(
                 Candle(
                     start_time=cursor,
@@ -157,7 +162,10 @@ def build_full_4h_candles(
     Convenience wrapper to produce a complete sequence in one call.
     """
 
-    aggregated = aggregate_updates_to_4h_candles(updates, start_time, end_time)
+    updates_list = list(updates)
+    if not updates_list:
+        return []
+    aggregated = aggregate_updates_to_4h_candles(updates_list, start_time, end_time)
     return backfill_missing_candles(aggregated, start_time, end_time)
 
 
