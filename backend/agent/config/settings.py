@@ -78,6 +78,16 @@ class LoggingConfig(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
 
+class LLMConfig(BaseSettings):
+    """LLM/provider configuration for higher-level reasoning tasks."""
+
+    provider: Literal["openrouter"] = "openrouter"
+    model: str = Field(default="anthropic/claude-3.5-sonnet")
+    api_key: SecretStr | None = None
+    base_url: HttpUrl = Field(default="https://openrouter.ai/api/v1")
+    request_timeout_seconds: int = Field(default=60)
+
+
 class StrategyConfig(BaseSettings):
     """Parameters shared across strategies."""
 
@@ -117,6 +127,7 @@ class AgentSettings(BaseSettings):
     pyth: PythConfig = Field(default_factory=PythConfig)
     oneinch: OneInchConfig
     x402: X402Config
+    llm: LLMConfig
     persistence: PersistenceConfig = Field(default_factory=PersistenceConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     strategy: StrategyConfig = Field(default_factory=StrategyConfig)
@@ -132,4 +143,3 @@ def get_settings() -> AgentSettings:
     """Load and cache the agent settings from environment variables."""
 
     return AgentSettings()
-
