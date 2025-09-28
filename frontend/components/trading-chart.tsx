@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import TradingViewWidget, { TradingViewWidgetHandle } from "./tradingview-widget"
+import { useTradingPair } from "@/lib/trading-pair-context"
 
 type SupportResistanceBand = {
   type: "support" | "resistance"
@@ -22,11 +23,14 @@ type SupportResistanceEvent = {
 
 export function TradingChart() {
   const fixedInterval = "5"
-  const symbol = "PYTH:BTCUSD"
+  const { selectedPair } = useTradingPair()
+  const tradingViewSymbol = selectedPair?.tradingViewSymbol ?? "PYTH:BTCUSD"
   const widgetRef = useRef<TradingViewWidgetHandle | null>(null)
   const [supportResistance, setSupportResistance] = useState<SupportResistanceEvent | null>(null)
 
   const agentBase = process.env.NEXT_PUBLIC_AGENT_API ?? "http://localhost:8000"
+
+  const selectedFeedId = useMemo(() => selectedPair?.pythFeedId?.toLowerCase(), [selectedPair?.pythFeedId])
 
   useEffect(() => {
     const eventSource = new EventSource(`${agentBase}/api/events`)
@@ -35,7 +39,15 @@ export function TradingChart() {
       try {
         const payload = JSON.parse(event.data)
         if (payload.type === 'strategy.support_resistance.created') {
-          setSupportResistance(payload.payload)
+          const eventPriceId: string | undefined = payload.payload?.priceId
+          if (!selectedFeedId || !eventPriceId) {
+            return
+          }
+          const normalizedEvent = eventPriceId.toLowerCase().replace(/^0x/, '')
+          const normalizedSelected = selectedFeedId.replace(/^0x/, '')
+          if (normalizedEvent === normalizedSelected) {
+            setSupportResistance(payload.payload)
+          }
         }
       } catch (err) {
         console.warn('Failed to parse SSE payload', err)
@@ -48,7 +60,14 @@ export function TradingChart() {
     }
 
     return () => eventSource.close()
-  }, [agentBase])
+  }, [agentBase, selectedFeedId])
+
+  useEffect(() => {
+    setSupportResistance(null)
+    if (widgetRef.current) {
+      widgetRef.current.clearDrawings()
+    }
+  }, [selectedPair?.id])
 
   useEffect(() => {
     if (!supportResistance || !widgetRef.current) {
@@ -70,11 +89,12 @@ export function TradingChart() {
     <div className="w-full h-full bg-[#0a0a0a] p-4">
       {/* TradingView Chart */}
       <TradingViewWidget
-        symbol={symbol}
+        key={tradingViewSymbol}
+        symbol={tradingViewSymbol}
         interval={fixedInterval}
         theme="dark"
         height={500}
-        containerId="btc-tradingview-chart"
+        containerId="tradingview-chart"
         ref={widgetRef}
       />
     </div>

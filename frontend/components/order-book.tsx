@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "./ui/button"
-import { StrategyBuilder, StrategyConfig } from "./strategy-builder"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { StrategyBuilder, StrategyConfig, StrategyTradingPair, StrategyExecutionConfig } from "./strategy-builder"
+import { useTradingPair } from "@/lib/trading-pair-context"
+import { TRADING_PAIRS } from "@/lib/trading-pairs"
 
 type StrategyAction = {
   label: string
@@ -19,6 +22,7 @@ type StrategySuggestion = {
   confidence: number
   actions: StrategyAction[]
   symbol: string
+  pairId?: string
   interval: string
   created_at: string
   latest_price?: number | null
@@ -28,6 +32,8 @@ type StrategySuggestion = {
   endpoint_used?: string | null
   latest_publish_time?: number | null
   supportResistance?: SupportResistanceEvent | null
+  tradingPair?: StrategyTradingPair
+  execution?: StrategyExecutionConfig
 }
 
 type SupportResistanceBand = {
@@ -49,8 +55,7 @@ type SupportResistanceEvent = {
 
 export function OrderBook() {
   const fixedInterval = "5"
-  const symbol = "PYTH:BTCUSD"
-  
+  const { selectedPair, selectedPairId, setSelectedPairId } = useTradingPair()
   const [strategySuggestion, setStrategySuggestion] = useState<StrategySuggestion | null>(null)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -65,6 +70,10 @@ export function OrderBook() {
   )
 
   const handleAnalyzeChart = useCallback(async () => {
+    if (!selectedPair) {
+      setAnalysisError('Unsupported trading pair selected')
+      return
+    }
     setIsAnalyzing(true)
     setAnalysisError(null)
 
@@ -75,7 +84,8 @@ export function OrderBook() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          symbol,
+          pairId: selectedPairId,
+          symbol: selectedPair.backendSymbol,
           interval: fixedInterval
         })
       })
@@ -99,7 +109,7 @@ export function OrderBook() {
     } finally {
       setIsAnalyzing(false)
     }
-  }, [analysisEndpoint, fixedInterval, symbol])
+  }, [analysisEndpoint, fixedInterval, selectedPairId, selectedPair])
 
   useEffect(() => {
     const eventSource = new EventSource(`${agentBase}/api/events`)
@@ -133,6 +143,12 @@ export function OrderBook() {
     const timer = setTimeout(() => setHasRecentSuggestion(false), 6000)
     return () => clearTimeout(timer)
   }, [hasRecentSuggestion])
+
+  useEffect(() => {
+    setSupportResistance(null)
+    setStrategySuggestion(null)
+    setShowStrategyBuilder(false)
+  }, [selectedPairId])
 
   // Removed automatic re-fetch on strategy generation - only fetch when user clicks "Ask Agent"
 
@@ -172,6 +188,18 @@ export function OrderBook() {
         
         {/* Ask Agent Button */}
         <div className="mb-4 flex flex-col items-center gap-2">
+          <Select value={selectedPairId} onValueChange={setSelectedPairId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select trading pair" />
+            </SelectTrigger>
+            <SelectContent>
+              {TRADING_PAIRS.map((pair) => (
+                <SelectItem key={pair.id} value={pair.id}>
+                  {pair.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button 
             onClick={handleAnalyzeChart}
             disabled={isAnalyzing}
@@ -216,10 +244,10 @@ export function OrderBook() {
         {supportResistance && (
           <div className="space-y-3">
             {/* Header with confidence and time */}
-            <div className="text-center">
-              <div className="text-xs text-gray-400 mb-1">
-                {supportResistance.asset} - {fixedInterval} TIMEFRAME
-              </div>
+              <div className="text-center">
+                <div className="text-xs text-gray-400 mb-1">
+                {strategySuggestion?.tradingPair?.label ?? selectedPair?.label ?? supportResistance.asset} - {fixedInterval} TIMEFRAME
+                </div>
               <div className="text-xs text-emerald-400">
                 Confidence {((strategySuggestion?.confidence || 0.7) * 100).toFixed(0)}%
               </div>
@@ -296,13 +324,16 @@ export function OrderBook() {
         {/* Strategy Builder */}
         {showStrategyBuilder && supportResistance && (
           <div className="mt-6">
-            <StrategyBuilder
-              supportLevel={supportBand?.mid}
-              resistanceLevel={resistanceBand?.mid}
-              symbol={symbol}
-              timeframe={fixedInterval}
-              onStrategyCreate={handleStrategyCreate}
-            />
+            {selectedPair && (
+              <StrategyBuilder
+                supportLevel={supportBand?.mid}
+                resistanceLevel={resistanceBand?.mid}
+                symbol={selectedPair.backendSymbol}
+                timeframe={fixedInterval}
+                pair={selectedPair}
+                onStrategyCreate={handleStrategyCreate}
+              />
+            )}
           </div>
         )}
       </div>
