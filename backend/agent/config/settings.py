@@ -20,6 +20,8 @@ class ContractsConfig(BaseSettings):
     validation: Optional[str] = None
     strategy_registry: Optional[str] = None
     base_agent: Optional[str] = None
+    x402_escrow: Optional[str] = None
+    x402_strategy_registry: Optional[str] = None
 
 
 class WalletConfig(BaseSettings):

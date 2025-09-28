@@ -69,10 +69,40 @@ X402_DEFAULT_AMOUNT = Decimal("0.10")  # $0.10 per API call budget
 
 # Pyth configuration defaults
 PYTH_HERMES_ENDPOINT = "https://hermes.pyth.network"
-PYTH_PRICE_FEED_IDS: dict[str, str] = {
-    "ETH_USD": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
-    "BTC_USD": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+
+# Mapping between human readable trading pairs, their backing Pyth feed, and
+# the Polygon token addresses we will eventually execute against via 1inch/x402.
+EXECUTION_SYMBOL_MAP: dict[str, dict[str, object]] = {
+    "WETH/USDC": {
+        "pyth_symbol": "ETH_USD",
+        "pyth_feed_id": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+        "base_token": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+        "quote_token": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+        "decimals": {"base": 18, "quote": 6},
+    },
+    "WBTC/USDC": {
+        "pyth_symbol": "BTC_USD",
+        "pyth_feed_id": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+        "base_token": "0x1BFD67037B42CF73acf2047067bd4F2C47D9BfD6",
+        "quote_token": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+        "decimals": {"base": 8, "quote": 6},
+    },
+    "WETH/MATIC": {
+        "pyth_symbol": "ETH_USD",
+        "pyth_feed_id": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+        "base_token": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+        "quote_token": "0x0000000000000000000000000000000000001010",
+        "decimals": {"base": 18, "quote": 18},
+    },
 }
+
+# Backwards-compatible feed lookups for existing services that only require the
+# Pyth price identifier.
+PYTH_PRICE_FEED_IDS: dict[str, str] = {}
+for pair in EXECUTION_SYMBOL_MAP.values():
+    symbol = pair["pyth_symbol"]
+    feed = pair["pyth_feed_id"]
+    PYTH_PRICE_FEED_IDS[symbol] = feed
 
 
 # 1inch configuration defaults
@@ -84,4 +114,3 @@ ONE_INCH_SWAP_ENDPOINT = "/v5.0"
 AGENT_VERSION = "0.1.0"
 MAX_RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 5
-
