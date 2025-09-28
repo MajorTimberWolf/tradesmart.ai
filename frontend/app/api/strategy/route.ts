@@ -1,5 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const BACKEND_BASE = (process.env.AGENT_API_BASE ?? 'http://localhost:8000').replace(/\/$/, '')
+
+export interface StrategyTradingPair {
+  id: string
+  backendSymbol: string
+  baseToken: string
+  quoteToken: string
+  pythFeedId: string
+  label: string
+  decimals: {
+    base: number
+    quote: number
+  }
+}
+
+export interface StrategyExecutionConfig {
+  enabled: boolean
+  positionSize: {
+    type: 'fixed_usd' | 'percentage'
+    value: number
+  }
+  slippageTolerance: number
+  maxGasFee: number
+}
+
 export interface StrategyConfig {
   riskRewardRatio: string
   indicators: IndicatorConfig[]
@@ -9,6 +34,8 @@ export interface StrategyConfig {
   }
   symbol: string
   timeframe: string
+  tradingPair: StrategyTradingPair
+  execution: StrategyExecutionConfig
 }
 
 export interface IndicatorConfig {
@@ -45,6 +72,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!strategy.tradingPair || !strategy.tradingPair.baseToken || !strategy.tradingPair.quoteToken) {
+      return NextResponse.json(
+        { error: 'Missing trading pair configuration' },
+        { status: 400 }
+      )
+    }
+
+    if (!strategy.execution || typeof strategy.execution.enabled !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Missing execution configuration' },
+        { status: 400 }
+      )
+    }
+
+    if (strategy.execution.enabled) {
+      const { positionSize, slippageTolerance, maxGasFee } = strategy.execution
+      if (!positionSize || positionSize.value <= 0) {
+        return NextResponse.json(
+          { error: 'Invalid position size' },
+          { status: 400 }
+        )
+      }
+      if (slippageTolerance <= 0 || slippageTolerance > 10) {
+        return NextResponse.json(
+          { error: 'Invalid slippage tolerance' },
+          { status: 400 }
+        )
+      }
+      if (maxGasFee <= 0) {
+        return NextResponse.json(
+          { error: 'Invalid gas fee limit' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Create a unique strategy ID
     const strategyId = `strategy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -61,24 +124,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Here you would typically:
-    // 1. Save to database
-    // 2. Send to your payment agent
-    // 3. Set up monitoring/execution
+    const backendResponse = await fetch(`${BACKEND_BASE}/api/strategies/execution`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enhancedStrategy)
+    })
 
-    console.log('Strategy created:', enhancedStrategy)
+    if (!backendResponse.ok) {
+      const detail = await backendResponse.text().catch(() => backendResponse.statusText)
+      console.error('Backend strategy persistence failed:', detail)
+      return NextResponse.json(
+        { error: 'Backend persistence failed', detail },
+        { status: 502 }
+      )
+    }
 
-    // For now, we'll just return success
-    // In a real implementation, you would:
-    // - Save to your database
-    // - Send to your payment agent via API
-    // - Set up monitoring for the strategy conditions
+    const persisted = await backendResponse.json().catch(() => null)
 
     return NextResponse.json({
       success: true,
       strategyId,
       message: 'Strategy created successfully',
-      strategy: enhancedStrategy
+      strategy: persisted ?? enhancedStrategy
     })
 
   } catch (error) {

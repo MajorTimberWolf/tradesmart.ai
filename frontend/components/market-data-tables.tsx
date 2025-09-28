@@ -107,11 +107,27 @@ function StrategyList() {
             <span>#{rows.length - idx}</span>
             <a href={`https://gateway.lighthouse.storage/ipfs/${cid}`} target="_blank" className="text-blue-400 underline">CID</a>
           </div>
-          <div className="mt-1 text-sm text-white/90">
-            {strategy.symbol} • {strategy.timeframe}
-          </div>
+          {(() => {
+            const pairLabel = strategy.tradingPair?.label ?? strategy.tokenPair?.label ?? strategy.symbol
+            const timeframe = strategy.timeframe ?? '—'
+            return (
+              <div className="mt-1 text-sm text-white/90">
+                {pairLabel} • {timeframe}
+              </div>
+            )
+          })()}
           <div className="text-xs text-gray-400">{strategy.liquidityLevel.type} @ {strategy.liquidityLevel.price}</div>
           <div className="text-xs text-gray-500">RR: {strategy.riskRewardRatio} • Indicators: {strategy.indicators?.map((i:any)=>i.name).join(', ') || '—'}</div>
+          {strategy.execution && (
+            <div className="text-[11px] text-gray-500 mt-1">
+              Auto-Trading: {strategy.execution.enabled ? 'On' : 'Off'} •
+              {' '}
+              Size: {strategy.execution.positionSize?.type === 'percentage'
+                ? `${strategy.execution.positionSize?.value}%`
+                : `$${strategy.execution.positionSize?.value}`}
+              {' '}• Slippage: {strategy.execution.slippageTolerance}% • Gas ≤ {strategy.execution.maxGasFee} MATIC
+            </div>
+          )}
         </div>
       ))}
     </div>
