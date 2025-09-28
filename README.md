@@ -4,7 +4,7 @@ An autonomous trading platform that combines AI-powered chart analysis with auto
 
 ## Architecture
 
-![AI Trading Agent Platform Architecture](architecture%20diagram.png)
+![AI Trading Agent Platform Architecture](architecture-diagram.png)
 
 ## Quick Start
 
