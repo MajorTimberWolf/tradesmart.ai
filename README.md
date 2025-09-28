@@ -1,107 +1,72 @@
-# Simple Trading Agent
+# AI Trading Agent Platform
 
-A simplified LangChain trading agent that autonomously executes trading strategies using ERC8004 infrastructure, Pyth Network price oracles, and 1inch DEX integration.
+An autonomous trading platform that combines AI-powered chart analysis with automated execution on Ethereum. The system uses Claude Sonnet for technical analysis and integrates with Pyth oracles and 1inch DEX for intelligent trading decisions.
 
-## 🚀 Quick Start
+## Architecture
 
+![AI Trading Agent Platform Architecture](architecture%20diagram.png)
+
+## Quick Start
+
+### Prerequisites
+- Node.js (for frontend)
+- Python with uv (for backend)
+- Ethereum wallet with private key
+
+### Setup Instructions
+
+1. **Clone the repository**
 ```bash
-# Activate environment
-conda activate ethglobal
-
-# Run the agent once
-python app.py
-
-# Run continuously
-python app.py --mode loop
-
-# Test individual components
-python app.py --price    # Test price fetching
-python app.py --rsi      # Test RSI calculation
-python app.py --quote    # Test 1inch quotes
-python app.py --test     # Run unit tests
+git clone https://github.com/your-username/eth-global-delhi.git
+cd eth-global-delhi
 ```
 
-## 🧠 Agent + Frontend Integration
-
+2. **Configure environment**
 ```bash
-# 1. Ensure backend/agent/.env contains your OpenRouter API key (LLM__API_KEY)
+# Copy environment template
+1) cp backend/agent/.env.example backend/agent/.env
+2) cp backend/pyth-oracle/.env.example backend/pyth-oracle/.env
+3) cp frontend/.env.example frontend/.env.local
 
-# 2. Start the chart-analysis API (FastAPI)
-uvicorn backend.agent.api.server:app --host 0.0.0.0 --port 8000 --reload
-
-# 3. Configure the frontend
-echo "NEXT_PUBLIC_AGENT_API_URL=http://127.0.0.1:8000" >> frontend/.env.local
-
-# 4. Start the Next.js frontend separately (see frontend README)
+# Edit the .env file with your configuration
+# Required: WALLET__PRIVATE_KEY, LLM__API_KEY, network RPC URLs
 ```
 
-Once running, the TradingView chart exposes an **Ask Agent** action. The captured chart snapshot is analysed by Claude Sonnet via OpenRouter and recent strategy suggestions appear in the Strategy Address Book panel.
-
-## 📋 Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `python app.py` | Run agent once (default) |
-| `python app.py --mode once` | Run agent once (explicit) |
-| `python app.py --mode loop` | Run continuously (30s intervals) |
-| `python app.py --price` | Test Pyth price fetching |
-| `python app.py --rsi` | Test RSI calculation with live data |
-| `python app.py --quote` | Test 1inch quote fetching |
-| `python app.py --test` | Run all unit tests |
-
-## 🏗️ Architecture
-
-```
-app.py                          # Simple entry point
-├── backend/agent/
-│   ├── core/
-│   │   ├── agent.py           # Main TradingAgent class
-│   │   ├── tools/             # Core tools
-│   │   │   ├── price_fetcher.py    # Pyth price feeds
-│   │   │   ├── rsi_calculator.py   # RSI calculation
-│   │   │   ├── quote_fetcher.py    # 1inch quotes
-│   │   │   ├── contract_executor.py # Web3 execution
-│   │   │   └── risk_manager.py     # Risk management
-│   │   └── strategies/
-│   │       ├── strategy_base.py    # Base strategy class
-│   │       └── rsi_strategy.py     # RSI trading strategy
-│   ├── config/
-│   │   ├── settings.py        # Configuration management
-│   │   └── constants.py       # Trading constants
-│   └── tests/
-│       └── test_trading_agent.py # Unit tests
-```
-
-## ⚙️ Configuration
-
-The agent uses environment variables from `backend/agent/.env`:
-
+3. **Start the backend server**
 ```bash
-# Wallet Configuration
-WALLET__PRIVATE_KEY=your_private_key
-WALLET__ADDRESS=your_wallet_address
-
-# Network Configuration
-NETWORK__RPC_URL=https://sepolia.infura.io/v3/your_key
-NETWORK__CHAIN_ID=11155111
-
-# Contract Addresses
-CONTRACTS__AGENT_REGISTRY=0x...
-CONTRACTS__ARBITRAGE_AGENT=0x...
-CONTRACTS__DCA_AGENT=0x...
-CONTRACTS__GRID_TRADING_AGENT=0x...
-
-# API Keys
-ONEINCH__API_KEY=your_1inch_api_key
-PYTH__API_KEY=your_pyth_api_key
+# From project root directory
+uvicorn backend.agent.api.server:app --reload --port 8000
 ```
 
-## 🔧 Development
-
-### Running Tests
+4. **Start the frontend**
 ```bash
-python app.py --test
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies 
+npm install
+# start development server
+npm run dev
 ```
+
+### Running the Platform
+
+Once both services are running:
+- Open your browser to `http://localhost:3000` (frontend)
+- The backend API will be available at `http://localhost:8000`
+- Use the TradingView chart to capture snapshots and click "Ask Agent" for AI analysis
+- View trading suggestions in the Strategy Address Book panel
+
+## Key Features
+
+- **AI-Powered Analysis**: Claude Sonnet analyzes trading charts and provides strategy suggestions
+- **Real-time Price Data**: Integrated with Pyth Network for accurate oracle prices
+- **DEX Integration**: 1inch API for optimal trade execution
+- **Risk Management**: Built-in safety checks and position limits
+- **Smart Contract Support**: ERC8004 infrastructure for autonomous agents
+- **Live Testing**: Deploy and test trading strategies on Sepolia testnet
+
+## Development
 
 ### Testing Individual Components
 ```bash
@@ -111,64 +76,17 @@ python app.py --price
 # Test RSI calculation
 python app.py --rsi
 
-# Test quote fetching
+# Test DEX quotes
 python app.py --quote
+
+# Run all tests
+python app.py --test
 ```
 
-### Running the Agent
-```bash
-# Single run
-python app.py
-
-# Continuous loop
-python app.py --mode loop
-```
-
-## 📊 Current Status
-
-- ✅ **Price Fetching**: Pyth Network integration working
-- ✅ **RSI Calculation**: Technical analysis working
-- ✅ **Agent Orchestration**: Main loop working
-- ✅ **Unit Tests**: All tests passing
-- 🔄 **Quote Fetching**: Needs Sepolia token addresses
-- 🔄 **Contract Execution**: Needs strategy parameter updates
-
-## 🎯 Next Steps
-
-1. Update RSI strategy with Sepolia token addresses
-2. Test 1inch quote fetching with real tokens
-3. Enable contract execution for live trading
-4. Add more trading strategies (Grid, DCA)
-
-## 📝 Logs
-
-The agent provides detailed logging:
-- Price data and confidence levels
-- RSI calculations and signals
-- Trade execution results
-- Error handling and recovery
-
-Example output:
-```
-🚀 Simple Trading Agent
-==================================================
-🤖 Running Trading Agent (Once)...
-[2025-09-27 00:45:31] No trade signal: RSI 50.00 not below threshold
-✅ Agent cycle completed
-✅ All operations completed successfully!
-```
-
-## 🛡️ Safety Features
-
-- Risk management validation
-- Slippage protection
-- Position size limits
-- Emergency stop capabilities
-- Comprehensive error handling
-
-## 📚 Documentation
-
-- [Agent Plan](plan-docs/agent-plan.md) - Detailed implementation plan
-- [Complete Plan](plan-docs/complete-plan.md) - Full project overview
-- [Contract Addresses](contracts/addresses.json) - Deployed contract addresses
-- [ABI Files](contracts/abi/) - Contract interfaces
+### Configuration
+Edit `backend/agent/.env` to configure:
+- Wallet settings (private key, address)
+- Network RPC URLs
+- API keys (LLM, 1inch, Pyth)
+- Contract addresses
+- Trading parameters
