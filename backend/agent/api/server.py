@@ -18,6 +18,11 @@ from backend.agent.services.support_resistance import (
     SupportResistanceResponse,
     SupportResistanceService,
 )
+from backend.agent.services.strategy_schema import StrategyConfig
+from backend.agent.services.strategy_repository import StrategyRepository
+from backend.agent.execution.strategy_monitor import ExecutionStrategyMonitor
+from backend.agent.execution.swap_planner import SwapPlanner
+from backend.agent.core.tools.quote_fetcher import QuoteFetcher
 from backend.agent.execution.job_runner import MonitoringJobs, WatchedBand
 from backend.agent.api.event_bus import event_bus
 
@@ -38,6 +43,10 @@ app.add_middleware(
 _analysis_service = ChartAnalysisService()
 _sr_service = SupportResistanceService()
 _jobs = MonitoringJobs()
+_strategy_repo = StrategyRepository()
+_execution_monitor = ExecutionStrategyMonitor(_strategy_repo)
+_quote_fetcher = QuoteFetcher()
+_swap_planner = SwapPlanner(quote_fetcher=_quote_fetcher)
 
 
 @app.get("/health")
@@ -63,6 +72,46 @@ async def list_strategies() -> list[StrategySuggestion]:
     return _analysis_service.list_strategies()
 
 
+@app.get("/api/strategies/execution", response_model=list[StrategyConfig])
+async def list_execution_strategies() -> list[StrategyConfig]:
+    return _strategy_repo.list()
+
+
+@app.post("/api/strategies/execution", response_model=StrategyConfig, status_code=201)
+async def create_execution_strategy(strategy: StrategyConfig) -> StrategyConfig:
+    return _strategy_repo.add(strategy)
+
+
+@app.get("/api/strategies/execution/summaries")
+async def list_execution_strategy_summaries() -> list[dict[str, object]]:
+    return _execution_monitor.list_strategy_summaries()
+
+
+@app.get("/api/strategies/execution/plans")
+async def list_execution_plans(portfolioUsd: float | None = None) -> list[dict[str, object]]:
+    plans: list[dict[str, object]] = []
+    execution_plans = _execution_monitor.load_execution_plans()
+    for execution_plan in execution_plans:
+        try:
+            swap_plan = _swap_planner.plan(execution_plan, portfolioUsd)
+        except Exception as exc:  # pragma: no cover - network/quote failures
+            # Surface failure context for debugging while allowing others to proceed
+            plans.append(
+                {
+                    "strategy": execution_plan.strategy.model_dump(mode="json"),
+                    "error": str(exc),
+                }
+            )
+            continue
+        plans.append(swap_plan.to_dict())
+    return plans
+
+
+@app.get("/api/oneinch/tokens")
+async def list_oneinch_tokens() -> dict[str, dict[str, str]]:
+    return _quote_fetcher.list_tokens()
+
+
 @app.post("/api/strategies/support-resistance", response_model=SupportResistanceResponse)
 async def build_support_resistance(request: SupportResistanceRequest) -> SupportResistanceResponse:
     try:
@@ -85,7 +134,7 @@ async def build_support_resistance(request: SupportResistanceRequest) -> Support
         ]
         job_id = _jobs.start_band_watch(result.asset + "_USD", watched)
         result.jobId = job_id
-        return result
+    return result
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
